@@ -13,6 +13,12 @@ public interface EventoPartidoRepository extends JpaRepository<EventoPartido, In
 
     List<EventoPartido> findByPartidoIdOrderByMinutoAscIdAsc(Integer partidoId);
 
+    /** Eventos de un partido en orden, con el jugador en la misma consulta (para el detalle). */
+    @Query("""
+            select e from EventoPartido e join fetch e.jugador j
+            where e.partido.id = :partidoId order by e.minuto, e.id""")
+    List<EventoPartido> findEventosDePartido(@Param("partidoId") Integer partidoId);
+
     /** Goles de varios partidos en una sola consulta, para calcular resultados en lote. */
     @Query("""
             select e from EventoPartido e join fetch e.jugador j
