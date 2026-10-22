@@ -51,8 +51,9 @@ src/main/java/com/isw2/liga/
 |---|---|---|---|---|
 | POST | `/api/auth/login` | Público | RF-01 | ✅ |
 | GET | `/api/torneos`, `/api/canchas`, `/api/arbitros` | Público | RF-05 | ✅ |
-| GET/POST/PUT | `/api/usuarios`, `/api/usuarios/{id}` | Admin | RF-02 | ⬜ Matías |
-| PATCH | `/api/usuarios/{id}/activo` | Admin | RF-02, RN-08 | ⬜ Matías |
+| GET/POST/PUT | `/api/usuarios`, `/api/usuarios/{id}` | Admin | RF-02, RN-08 | ✅ |
+| PUT | `/api/usuarios/{id}/password` | Admin | RF-02 | ✅ |
+| PATCH | `/api/usuarios/{id}/activo` | Admin | RF-02, RN-08 | ✅ |
 | GET/POST/PUT | `/api/equipos`, `/api/equipos/{id}` | GET público, resto Admin | RF-03 | ⬜ Miretti |
 | PATCH | `/api/equipos/{id}/activo` | Admin | RF-03, RN-09 | ⬜ Miretti |
 | GET | `/api/equipos/{id}/jugadores` | Público | RF-05 | ⬜ Miretti |
@@ -68,8 +69,39 @@ src/main/java/com/isw2/liga/
 
 Errores: siempre `{"status": 409, "mensaje": "..."}`. Sin token: 401. Sin el rol: 403.
 
+### Ejemplos de cuerpos (usuarios)
+
+```jsonc
+// POST /api/usuarios → 201
+{ "username": "delegado1", "password": "clave1234", "nombreCompleto": "Juan Pérez", "rol": "DELEGADO" }
+// PUT /api/usuarios/{id} → 200 (el username no se cambia)
+{ "nombreCompleto": "Juan Pérez", "rol": "ADMIN" }
+// PUT /api/usuarios/{id}/password → 204
+{ "password": "nuevaClave1" }
+// PATCH /api/usuarios/{id}/activo → 200 (también sirve para equipos y jugadores)
+{ "activo": false }
+```
+
+`GET /api/usuarios` devuelve activos e inactivos; con `?incluirInactivos=false` solo los activos.
+
 ## Flujo de trabajo con Git
-- `main` siempre compila. Cada tarea va en su rama: `feature/RF-06-programar-partidos`.
-- Commits con el código del requerimiento: `RF-08: valida jugador suspendido (RN-03)`.
-- Se entra a `main` por Pull Request, revisado por al menos un compañero.
-- Antes de abrir el PR: `./gradlew test` en verde.
+
+```
+main      ← solo versiones estables (entregas y defensa)
+  └── develop   ← integración de todo lo terminado
+        └── feature/RF-xx-descripcion   ← una rama por funcionalidad
+```
+
+1. Arrancar cada funcionalidad **desde `develop`**:
+   ```bash
+   git checkout develop
+   git pull
+   git checkout -b feature/RF-03-equipos
+   ```
+2. Commits con el código del requerimiento: `RF-08: valida jugador suspendido (RN-03)`.
+3. Antes de abrir el PR: `git pull origin develop` (resolver conflictos en la rama propia) y `./gradlew test` en verde.
+4. `git push -u origin feature/RF-03-equipos` y abrir el **Pull Request contra `develop`**, nunca contra `main`.
+   Lo revisa al menos un compañero antes de mergear.
+5. Cuando `develop` está estable y probado, se abre un **PR de `develop` a `main`**.
+
+A `main` y `develop` no se hace push directo: todo entra por Pull Request.
