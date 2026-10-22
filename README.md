@@ -105,3 +105,6 @@ main      ← solo versiones estables (entregas y defensa)
 5. Cuando `develop` está estable y probado, se abre un **PR de `develop` a `main`**.
 
 A `main` y `develop` no se hace push directo: todo entra por Pull Request.
+
+El mismo flujo se usa en el repo de la app (`isw2-g6-app`), que es independiente: una funcionalidad
+completa suele llevar un PR en cada repo, y el contrato de la API de este README es lo que los une.
