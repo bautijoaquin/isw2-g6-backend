@@ -3,7 +3,7 @@
 Backend del proyecto integrador de Ingeniería de Software II × Programación (IES N.º 9233).
 API REST en Spring Boot 3 + Java 17 + H2 que consume la app móvil (`isw2-g6-app`, React Native con Expo).
 
-**Grupo 6:** Miretti · Scolari · Matías · Negro
+**Grupo 6:** Juan Igancio Miretti · Juan Cruz Scolari · Matías Espino · Bautista Joaquin
 
 ## Cómo levantarlo desde cero (RNF-09)
 
