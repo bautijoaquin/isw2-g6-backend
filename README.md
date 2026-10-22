@@ -61,8 +61,8 @@ src/main/java/com/isw2/liga/
 | POST/PUT/DELETE | `/api/partidos`, `/api/partidos/{id}` | Admin | RF-06, RN-01, RN-02, RN-07 | ⬜ Scolari |
 | POST | `/api/partidos/{id}/iniciar`, `/finalizar`, `/suspender` | Delegado/Admin | RF-07, RN-05 | ⬜ Scolari |
 | GET | `/api/partidos/{id}` (detalle + eventos + resultado) | Público | RF-10, RN-06 | ✅ |
-| POST | `/api/partidos/{id}/eventos` | Delegado/Admin | RF-08, RN-03, RN-04 | ⬜ Negro |
-| DELETE | `/api/eventos/{id}` | Delegado/Admin | RF-09 | ⬜ Negro |
+| POST | `/api/partidos/{id}/eventos` | Delegado/Admin | RF-08, RN-03, RN-04 | ✅ |
+| DELETE | `/api/eventos/{id}` | Delegado/Admin | RF-09 | ✅ |
 | GET | `/api/torneos/{id}/tabla` | Público | RF-11 | ✅ |
 | GET | `/api/torneos/{id}/fechas/{n}/suspendidos` | Público | RF-12, RN-03 | ✅ |
 

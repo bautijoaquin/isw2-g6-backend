@@ -47,11 +47,24 @@ public class SuspensionService {
         Map<Integer, Jugador> jugadores = new HashMap<>();
         tarjetas.forEach(e -> jugadores.put(e.getJugador().getId(), e.getJugador()));
 
-        Map<Integer, Motivo> sancionados = Suspensiones.sancionados(tarjetas.stream()
-                .map(e -> new Tarjeta(e.getPartido().getId(), e.getJugador().getId(), e.getTipo()))
-                .toList());
+        Map<Integer, Motivo> sancionados = sancionadosDe(tarjetas);
         return sancionados.entrySet().stream()
                 .map(s -> SuspendidoDTO.desde(jugadores.get(s.getKey()), s.getValue(), fechaSancion))
                 .toList();
+    }
+
+    /** RN-03 aplicado a un jugador: lo usa EventoService para no aceptar eventos de un suspendido (RF-08). */
+    public boolean estaSuspendido(Integer torneoId, int fecha, Integer jugadorId) {
+        if (fecha <= 1) {
+            return false;
+        }
+        return sancionadosDe(eventoRepository.findTarjetasDeFechaFinalizada(torneoId, fecha - 1))
+                .containsKey(jugadorId);
+    }
+
+    private static Map<Integer, Motivo> sancionadosDe(List<EventoPartido> tarjetas) {
+        return Suspensiones.sancionados(tarjetas.stream()
+                .map(e -> new Tarjeta(e.getPartido().getId(), e.getJugador().getId(), e.getTipo()))
+                .toList());
     }
 }
