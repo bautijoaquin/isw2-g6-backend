@@ -35,15 +35,10 @@ public class ResultadoService {
     }
 
     public PartidoDetalleDTO detalle(Integer partidoId) {
-        Partido p = partidoRepository.findById(partidoId)
+        Partido p = partidoRepository.findConDetalleById(partidoId)
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el partido " + partidoId));
-        List<EventoPartido> eventos = eventoRepository.findByPartidoIdOrderByMinutoAscIdAsc(partidoId);
-        List<Integer> equiposDeLosGoles = eventos.stream()
-                .filter(e -> e.getTipo() == TipoEvento.GOL)
-                .map(e -> e.getJugador().getEquipo().getId())
-                .toList();
-        Resultado r = Resultado.calcular(p.getEquipoLocal().getId(), p.getEquipoVisitante().getId(),
-                equiposDeLosGoles);
+        List<EventoPartido> eventos = eventoRepository.findEventosDePartido(partidoId);
+        Resultado r = resultado(p, eventos);
         return new PartidoDetalleDTO(p.getId(), p.getTorneo().getId(), p.getNumeroFecha(),
                 new ResumenDTO(p.getEquipoLocal().getId(), p.getEquipoLocal().getNombre()),
                 new ResumenDTO(p.getEquipoVisitante().getId(), p.getEquipoVisitante().getNombre()),
@@ -59,14 +54,21 @@ public class ResultadoService {
         if (partidos.isEmpty()) {
             return Map.of();
         }
-        Map<Integer, List<Integer>> golesPorPartido = eventoRepository.findGolesDe(partidos).stream()
-                .collect(Collectors.groupingBy(e -> e.getPartido().getId(),
-                        Collectors.mapping(e -> e.getJugador().getEquipo().getId(), Collectors.toList())));
+        Map<Integer, List<EventoPartido>> golesPorPartido = eventoRepository.findGolesDe(partidos).stream()
+                .collect(Collectors.groupingBy(e -> e.getPartido().getId()));
         Map<Integer, Resultado> resultados = new HashMap<>();
         for (Partido p : partidos) {
-            resultados.put(p.getId(), Resultado.calcular(p.getEquipoLocal().getId(), p.getEquipoVisitante().getId(),
-                    golesPorPartido.getOrDefault(p.getId(), List.of())));
+            resultados.put(p.getId(), resultado(p, golesPorPartido.getOrDefault(p.getId(), List.of())));
         }
         return resultados;
+    }
+
+    /** Único lugar donde los eventos se convierten en resultado: el detalle y la tabla usan el mismo. */
+    private static Resultado resultado(Partido p, List<EventoPartido> eventos) {
+        List<Integer> equiposDeLosGoles = eventos.stream()
+                .filter(e -> e.getTipo() == TipoEvento.GOL)
+                .map(e -> e.getJugador().getEquipo().getId())
+                .toList();
+        return Resultado.calcular(p.getEquipoLocal().getId(), p.getEquipoVisitante().getId(), equiposDeLosGoles);
     }
 }

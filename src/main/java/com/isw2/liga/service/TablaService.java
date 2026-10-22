@@ -45,13 +45,15 @@ public class TablaService {
         List<Partido> finalizados = partidoRepository.findByTorneoIdAndEstado(torneoId, EstadoPartido.FINALIZADO);
         Map<Integer, Resultado> resultados = resultadoService.resultadosDe(finalizados);
 
+        List<PartidoJugado> jugados = finalizados.stream()
+                .map(p -> new PartidoJugado(p.getEquipoLocal().getId(), p.getEquipoVisitante().getId(),
+                        resultados.get(p.getId())))
+                .toList();
         Set<Integer> jugaron = new HashSet<>();
-        List<PartidoJugado> jugados = finalizados.stream().map(p -> {
-            jugaron.add(p.getEquipoLocal().getId());
-            jugaron.add(p.getEquipoVisitante().getId());
-            return new PartidoJugado(p.getEquipoLocal().getId(), p.getEquipoVisitante().getId(),
-                    resultados.get(p.getId()));
-        }).toList();
+        for (PartidoJugado p : jugados) {
+            jugaron.add(p.localId());
+            jugaron.add(p.visitanteId());
+        }
 
         // Un equipo dado de baja sigue en la tabla si llegó a jugar: sus partidos ya cuentan para los demás
         List<EquipoTabla> equipos = equipoRepository.findByTorneoIdOrderByNombreAsc(torneoId).stream()
