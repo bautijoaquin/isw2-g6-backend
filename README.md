@@ -65,7 +65,7 @@ src/main/java/com/isw2/liga/
 | POST | `/api/partidos/{id}/eventos` | Delegado/Admin | RF-08, RN-03, RN-04 | ⬜ Negro |
 | DELETE | `/api/eventos/{id}` | Delegado/Admin | RF-09 | ⬜ Negro |
 | GET | `/api/torneos/{id}/tabla` | Público | RF-11 | ✅ |
-| GET | `/api/torneos/{id}/fechas/{n}/suspendidos` | Público | RF-12, RN-03 | ⬜ Negro |
+| GET | `/api/torneos/{id}/fechas/{n}/suspendidos` | Público | RF-12, RN-03 | ✅ |
 
 Errores: siempre `{"status": 409, "mensaje": "..."}`. Sin token: 401. Sin el rol: 403.
 
