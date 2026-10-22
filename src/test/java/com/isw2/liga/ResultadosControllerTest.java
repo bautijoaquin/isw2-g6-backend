@@ -34,7 +34,7 @@ class ResultadosControllerTest {
     @Autowired private EventoPartidoRepository eventoRepository;
 
     private Equipo norte, sur, oeste;
-    private Jugador goleador, rival;
+    private Jugador goleador, rival, expulsado;
 
     @BeforeEach
     void cargarDatos() {
@@ -43,6 +43,7 @@ class ResultadosControllerTest {
         oeste = equipo("Oeste");
         goleador = jugador(norte, "10000001");
         rival = jugador(sur, "10000002");
+        expulsado = jugador(sur, "10000003");
     }
 
     @Test
@@ -95,8 +96,33 @@ class ResultadosControllerTest {
     }
 
     @Test
+    void suspendidosDeLaFechaSiguienteAUnaRojaEnPartidoFinalizado() throws Exception {
+        Partido p = partido(1, norte, sur, EstadoPartido.FINALIZADO);
+        evento(p, expulsado, TipoEvento.ROJA, 60);
+        evento(p, rival, TipoEvento.AMARILLA, 70);
+
+        mvc.perform(get("/api/torneos/1/fechas/2/suspendidos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].jugadorId").value(expulsado.getId()))
+                .andExpect(jsonPath("$[0].equipo").value("Sur"))
+                .andExpect(jsonPath("$[0].motivo").value("ROJA"))
+                .andExpect(jsonPath("$[0].fechaSancion").value(1));
+        // La sanción es solo para la fecha siguiente
+        mvc.perform(get("/api/torneos/1/fechas/3/suspendidos")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void unaRojaEnUnPartidoNoFinalizadoTodaviaNoSuspende() throws Exception {
+        Partido p = partido(1, norte, sur, EstadoPartido.EN_JUEGO);
+        evento(p, expulsado, TipoEvento.ROJA, 60);
+        mvc.perform(get("/api/torneos/1/fechas/2/suspendidos")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void torneoInexistenteDevuelve404() throws Exception {
         mvc.perform(get("/api/torneos/99/tabla")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/torneos/99/fechas/2/suspendidos")).andExpect(status().isNotFound());
     }
 
     private Equipo equipo(String nombre) {
