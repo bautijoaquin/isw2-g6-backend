@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,10 @@ public interface PartidoRepository extends JpaRepository<Partido, Integer> {
     List<Partido> findByTorneoIdOrderByNumeroFechaAscFechaHoraInicioAsc(Integer torneoId);
 
     List<Partido> findByTorneoIdAndEstado(Integer torneoId, EstadoPartido estado);
+
+    /** RN-07: si la fecha tiene partidos en alguno de esos estados (para saber si ya terminó). */
+    boolean existsByTorneoIdAndNumeroFechaAndEstadoIn(Integer torneoId, int numeroFecha,
+                                                     Collection<EstadoPartido> estados);
 
     // Consultas de RF-06, RN-01, RN-02 y RN-07. Los partidos SUSPENDIDOS no ocupan cancha, árbitro ni fecha.
     // excluirId deja afuera al propio partido cuando se modifica (al programar uno nuevo se pasa 0).
