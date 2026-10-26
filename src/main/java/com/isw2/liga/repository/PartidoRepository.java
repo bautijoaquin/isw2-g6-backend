@@ -10,8 +10,11 @@ import java.util.Optional;
 
 public interface PartidoRepository extends JpaRepository<Partido, Integer> {
 
+    /** Fixture con equipos, cancha y árbitro en la misma consulta (RF-10). */
+    @EntityGraph(attributePaths = {"equipoLocal", "equipoVisitante", "cancha", "arbitro"})
     List<Partido> findByTorneoIdAndNumeroFechaOrderByFechaHoraInicioAsc(Integer torneoId, int numeroFecha);
 
+    @EntityGraph(attributePaths = {"equipoLocal", "equipoVisitante", "cancha", "arbitro"})
     List<Partido> findByTorneoIdOrderByNumeroFechaAscFechaHoraInicioAsc(Integer torneoId);
 
     List<Partido> findByTorneoIdAndEstado(Integer torneoId, EstadoPartido estado);
