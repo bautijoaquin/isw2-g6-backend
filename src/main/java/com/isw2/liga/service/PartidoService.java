@@ -30,7 +30,7 @@ import java.util.Map;
 @Transactional
 public class PartidoService {
 
-    /** RN-01: tiempo mínimo entre el inicio de dos partidos en la misma cancha (o con el mismo árbitro). */
+    /** RN-01: cada partido reserva la cancha (y el árbitro, RN-02) 2 horas desde su inicio. */
     static final Duration SEPARACION_MINIMA = Duration.ofHours(2);
 
     private final PartidoRepository partidoRepository;
@@ -83,14 +83,15 @@ public class PartidoService {
     }
 
     /**
-     * Valida el pedido contra RN-01, RN-02 y RN-07 y, si está todo bien, carga los datos en el partido.
+     * Valida el pedido contra los criterios de RF-06 y las reglas RN-01, RN-02 y RN-07, y si está todo bien
+     * carga los datos en el partido.
      *
      * @param excluirId id del partido que se está modificando, para no chocar consigo mismo (0 si es nuevo)
      */
     private void completar(Partido partido, PartidoRequest request, Integer excluirId) {
-        // RN-07: local y visitante distintos, del torneo y activos; cancha y árbitro activos
+        // RF-06: local y visitante distintos, del torneo y activos; cancha y árbitro activos
         if (request.equipoLocalId().equals(request.equipoVisitanteId())) {
-            throw ApiException.datosInvalidos("El equipo local y el visitante tienen que ser distintos (RN-07)");
+            throw ApiException.datosInvalidos("El equipo local y el visitante tienen que ser distintos (RF-06)");
         }
         Integer torneoId = partido.getTorneo().getId();
         Equipo local = equipoDelTorneo(request.equipoLocalId(), torneoId);
@@ -98,12 +99,12 @@ public class PartidoService {
         Cancha cancha = canchaRepository.findById(request.canchaId())
                 .orElseThrow(() -> ApiException.noEncontrado("No existe la cancha " + request.canchaId()));
         if (!cancha.isActivo()) {
-            throw ApiException.conflicto("La cancha " + cancha.getNombre() + " no está activa (RN-07)");
+            throw ApiException.conflicto("La cancha " + cancha.getNombre() + " no está activa (RF-06)");
         }
         Arbitro arbitro = arbitroRepository.findById(request.arbitroId())
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el árbitro " + request.arbitroId()));
         if (!arbitro.isActivo()) {
-            throw ApiException.conflicto("El árbitro " + arbitro.getApellido() + " no está activo (RN-07)");
+            throw ApiException.conflicto("El árbitro " + arbitro.getApellido() + " no está activo (RF-06)");
         }
 
         LocalDateTime inicio = request.fechaHoraInicio();
@@ -113,15 +114,28 @@ public class PartidoService {
         if (partidoRepository.canchaOcupada(cancha.getId(), desde, hasta, excluirId)) {
             throw ApiException.conflicto("La cancha ya tiene un partido a menos de 2 horas (RN-01)");
         }
-        // RN-02
+        // RF-06: un equipo no juega dos veces en la misma fecha
         int fecha = request.numeroFecha();
         for (Equipo e : List.of(local, visitante)) {
             if (partidoRepository.equipoJuegaEnLaFecha(torneoId, fecha, e.getId(), excluirId)) {
-                throw ApiException.conflicto(e.getNombre() + " ya juega en la fecha " + fecha + " (RN-02)");
+                throw ApiException.conflicto(e.getNombre() + " ya juega en la fecha " + fecha + " (RF-06)");
             }
         }
+        // RN-02
         if (partidoRepository.arbitroOcupado(arbitro.getId(), desde, hasta, excluirId)) {
             throw ApiException.conflicto("El árbitro ya dirige un partido a menos de 2 horas (RN-02)");
+        }
+        // RN-07: las fechas se juegan en orden. Cada partido ocupa 2 horas desde su inicio (RN-01),
+        // asi que una fecha termina 2 horas despues de que empieza su ultimo partido.
+        LocalDateTime ultimoDeLaAnterior = partidoRepository.ultimoInicioDeLaFecha(torneoId, fecha - 1, excluirId);
+        if (ultimoDeLaAnterior != null && inicio.isBefore(ultimoDeLaAnterior.plus(SEPARACION_MINIMA))) {
+            throw ApiException.conflicto("La fecha " + fecha + " no puede empezar antes de que termine la fecha "
+                    + (fecha - 1) + " (RN-07)");
+        }
+        LocalDateTime primeroDeLaSiguiente = partidoRepository.primerInicioDeLaFecha(torneoId, fecha + 1, excluirId);
+        if (primeroDeLaSiguiente != null && hasta.isAfter(primeroDeLaSiguiente)) {
+            throw ApiException.conflicto("La fecha " + fecha + " tiene que terminar antes de que empiece la fecha "
+                    + (fecha + 1) + " (RN-07)");
         }
 
         partido.setNumeroFecha(fecha);
@@ -136,10 +150,10 @@ public class PartidoService {
         Equipo equipo = equipoRepository.findById(equipoId)
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el equipo " + equipoId));
         if (!equipo.getTorneo().getId().equals(torneoId)) {
-            throw ApiException.datosInvalidos("El equipo " + equipo.getNombre() + " no es de este torneo (RN-07)");
+            throw ApiException.datosInvalidos("El equipo " + equipo.getNombre() + " no es de este torneo (RF-06)");
         }
         if (!equipo.isActivo()) {
-            throw ApiException.conflicto("El equipo " + equipo.getNombre() + " está desactivado (RN-07)");
+            throw ApiException.conflicto("El equipo " + equipo.getNombre() + " está desactivado (RF-06)");
         }
         return equipo;
     }

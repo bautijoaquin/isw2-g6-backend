@@ -22,7 +22,7 @@ public interface PartidoRepository extends JpaRepository<Partido, Integer> {
 
     List<Partido> findByTorneoIdAndEstado(Integer torneoId, EstadoPartido estado);
 
-    // Consultas de RN-01 y RN-02. Los partidos SUSPENDIDOS no ocupan cancha, árbitro ni fecha.
+    // Consultas de RF-06, RN-01, RN-02 y RN-07. Los partidos SUSPENDIDOS no ocupan cancha, árbitro ni fecha.
     // excluirId deja afuera al propio partido cuando se modifica (al programar uno nuevo se pasa 0).
 
     /** RN-01: otro partido en la misma cancha que empieza entre desde y hasta (sin incluir los bordes). */
@@ -43,7 +43,7 @@ public interface PartidoRepository extends JpaRepository<Partido, Integer> {
     boolean arbitroOcupado(@Param("arbitroId") Integer arbitroId, @Param("desde") LocalDateTime desde,
                            @Param("hasta") LocalDateTime hasta, @Param("excluirId") Integer excluirId);
 
-    /** RN-02: el equipo ya juega otro partido en esa fecha del torneo. */
+    /** RF-06: el equipo ya juega otro partido en esa fecha del torneo. */
     @Query("""
             select count(p) > 0 from Partido p
             where p.torneo.id = :torneoId and p.numeroFecha = :fecha and p.id <> :excluirId
@@ -55,4 +55,20 @@ public interface PartidoRepository extends JpaRepository<Partido, Integer> {
     /** El partido con equipos, cancha y árbitro en una sola consulta (para el detalle). */
     @EntityGraph(attributePaths = {"equipoLocal", "equipoVisitante", "cancha", "arbitro"})
     Optional<Partido> findConDetalleById(Integer id);
+
+    /** RN-07: el inicio del último partido de una fecha (null si la fecha no tiene partidos). */
+    @Query("""
+            select max(p.fechaHoraInicio) from Partido p
+            where p.torneo.id = :torneoId and p.numeroFecha = :fecha and p.id <> :excluirId
+              and p.estado <> com.isw2.liga.model.EstadoPartido.SUSPENDIDO""")
+    LocalDateTime ultimoInicioDeLaFecha(@Param("torneoId") Integer torneoId, @Param("fecha") int fecha,
+                                        @Param("excluirId") Integer excluirId);
+
+    /** RN-07: el inicio del primer partido de una fecha (null si la fecha no tiene partidos). */
+    @Query("""
+            select min(p.fechaHoraInicio) from Partido p
+            where p.torneo.id = :torneoId and p.numeroFecha = :fecha and p.id <> :excluirId
+              and p.estado <> com.isw2.liga.model.EstadoPartido.SUSPENDIDO""")
+    LocalDateTime primerInicioDeLaFecha(@Param("torneoId") Integer torneoId, @Param("fecha") int fecha,
+                                        @Param("excluirId") Integer excluirId);
 }
