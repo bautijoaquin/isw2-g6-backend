@@ -83,7 +83,10 @@ public class PartidoService {
         return PartidoDTO.desde(partidoRepository.save(partido), new Resultado(0, 0));
     }
 
-    /** RF-06 y RN-07: solo se reprograma un partido que todavía no empezó. El torneo no se cambia. */
+    /**
+     * RF-06: solo se reprograma un partido que todavía no empezó, con los mismos controles que al programar
+     * (RN-01, RN-02 y RN-07). El torneo no se cambia.
+     */
     public PartidoDTO modificar(Integer id, PartidoRequest request) {
         Partido partido = buscarProgramado(id, "modificar");
         if (!partido.getTorneo().getId().equals(request.torneoId())) {
@@ -93,7 +96,7 @@ public class PartidoService {
         return PartidoDTO.desde(partido, new Resultado(0, 0));
     }
 
-    /** RF-06 y RN-07: un partido PROGRAMADO todavía no tiene eventos, así que se puede borrar. */
+    /** RF-06: un partido PROGRAMADO todavía no tiene eventos, así que se puede borrar. */
     public void eliminar(Integer id) {
         partidoRepository.delete(buscarProgramado(id, "eliminar"));
     }
@@ -167,7 +170,7 @@ public class PartidoService {
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el partido " + id));
         if (partido.getEstado() != EstadoPartido.PROGRAMADO) {
             throw ApiException.conflicto("El partido está " + partido.getEstado()
-                    + ": solo se puede " + accion + " un partido PROGRAMADO (RN-07)");
+                    + ": solo se puede " + accion + " un partido PROGRAMADO (RF-06)");
         }
         return partido;
     }
