@@ -58,7 +58,7 @@ src/main/java/com/isw2/liga/
 | PATCH | `/api/equipos/{id}/activo` | Admin | RF-03, RN-09 | ✅ |
 | GET | `/api/equipos/{id}/jugadores`, `/api/jugadores/{id}` | Público | RF-05 | ✅ |
 | POST/PUT/PATCH | `/api/jugadores`, `/api/jugadores/{id}`, `/api/jugadores/{id}/activo` | Admin | RF-04 | ✅ |
-| GET | `/api/partidos?torneoId=1&fecha=3` | Público | RF-10 | ⬜ Scolari |
+| GET | `/api/partidos?torneoId=1&fecha=3` | Público | RF-10 | ✅ |
 | POST/PUT/DELETE | `/api/partidos`, `/api/partidos/{id}` | Admin | RF-06, RN-01, RN-02, RN-07 | ⬜ Scolari |
 | POST | `/api/partidos/{id}/iniciar`, `/finalizar`, `/suspender` | Delegado/Admin | RF-07, RN-05 | ⬜ Scolari |
 | GET | `/api/partidos/{id}` (detalle + eventos + resultado) | Público | RF-10, RN-06 | ✅ |
@@ -99,6 +99,12 @@ Errores: siempre `{"status": 409, "mensaje": "..."}`. Sin token: 401. Sin el rol
 
 `GET /api/equipos` acepta `?torneoId=1`. `GET /api/equipos` y `GET /api/equipos/{id}/jugadores` devuelven solo los activos;
 con `?incluirInactivos=true` también los desactivados (RF-05). No se puede cargar un jugador en un equipo desactivado.
+
+### Fixture (partidos)
+
+`GET /api/partidos?torneoId=1&fecha=3` devuelve los partidos de esa fecha ordenados por horario, cada uno con
+`local`, `visitante`, `cancha`, `arbitro`, `fechaHoraInicio`, `estado` y el resultado calculado (`golesLocal`, `golesVisitante`).
+Sin `fecha` devuelve todo el torneo, ordenado por fecha y horario.
 
 ## Flujo de trabajo con Git
 
