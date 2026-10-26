@@ -2,29 +2,52 @@ package com.isw2.liga.service;
 
 import com.isw2.liga.calculo.Resultado;
 import com.isw2.liga.dto.PartidoDTO;
+import com.isw2.liga.dto.PartidoRequest;
 import com.isw2.liga.exception.ApiException;
+import com.isw2.liga.model.Arbitro;
+import com.isw2.liga.model.Cancha;
+import com.isw2.liga.model.Equipo;
 import com.isw2.liga.model.Partido;
+import com.isw2.liga.model.Torneo;
+import com.isw2.liga.repository.ArbitroRepository;
+import com.isw2.liga.repository.CanchaRepository;
+import com.isw2.liga.repository.EquipoRepository;
 import com.isw2.liga.repository.PartidoRepository;
 import com.isw2.liga.repository.TorneoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-/** RF-10: fixture del torneo, con el resultado de cada partido calculado con sus goles (RN-06). */
+/**
+ * RF-06 y RF-10: programar partidos y armar el fixture.
+ * El resultado de cada partido se calcula con sus goles (RN-06).
+ */
 @Service
 @Transactional
 public class PartidoService {
 
+    /** RN-01: tiempo mínimo entre el inicio de dos partidos en la misma cancha (o con el mismo árbitro). */
+    static final Duration SEPARACION_MINIMA = Duration.ofHours(2);
+
     private final PartidoRepository partidoRepository;
     private final TorneoRepository torneoRepository;
+    private final EquipoRepository equipoRepository;
+    private final CanchaRepository canchaRepository;
+    private final ArbitroRepository arbitroRepository;
     private final ResultadoService resultadoService;
 
     public PartidoService(PartidoRepository partidoRepository, TorneoRepository torneoRepository,
-                          ResultadoService resultadoService) {
+                          EquipoRepository equipoRepository, CanchaRepository canchaRepository,
+                          ArbitroRepository arbitroRepository, ResultadoService resultadoService) {
         this.partidoRepository = partidoRepository;
         this.torneoRepository = torneoRepository;
+        this.equipoRepository = equipoRepository;
+        this.canchaRepository = canchaRepository;
+        this.arbitroRepository = arbitroRepository;
         this.resultadoService = resultadoService;
     }
 
@@ -44,5 +67,80 @@ public class PartidoService {
         return partidos.stream()
                 .map(p -> PartidoDTO.desde(p, resultados.get(p.getId())))
                 .toList();
+    }
+
+    /** RF-06: el partido nuevo queda PROGRAMADO (es el valor por defecto de la entidad). */
+    public PartidoDTO programar(PartidoRequest request) {
+        Torneo torneo = torneoRepository.findById(request.torneoId())
+                .orElseThrow(() -> ApiException.noEncontrado("No existe el torneo " + request.torneoId()));
+        if (!torneo.isActivo()) {
+            throw ApiException.conflicto("El torneo " + torneo.getNombre() + " no está activo");
+        }
+        Partido partido = new Partido();
+        partido.setTorneo(torneo);
+        completar(partido, request, 0);
+        return PartidoDTO.desde(partidoRepository.save(partido), new Resultado(0, 0));
+    }
+
+    /**
+     * Valida el pedido contra RN-01, RN-02 y RN-07 y, si está todo bien, carga los datos en el partido.
+     *
+     * @param excluirId id del partido que se está modificando, para no chocar consigo mismo (0 si es nuevo)
+     */
+    private void completar(Partido partido, PartidoRequest request, Integer excluirId) {
+        // RN-07: local y visitante distintos, del torneo y activos; cancha y árbitro activos
+        if (request.equipoLocalId().equals(request.equipoVisitanteId())) {
+            throw ApiException.datosInvalidos("El equipo local y el visitante tienen que ser distintos (RN-07)");
+        }
+        Integer torneoId = partido.getTorneo().getId();
+        Equipo local = equipoDelTorneo(request.equipoLocalId(), torneoId);
+        Equipo visitante = equipoDelTorneo(request.equipoVisitanteId(), torneoId);
+        Cancha cancha = canchaRepository.findById(request.canchaId())
+                .orElseThrow(() -> ApiException.noEncontrado("No existe la cancha " + request.canchaId()));
+        if (!cancha.isActivo()) {
+            throw ApiException.conflicto("La cancha " + cancha.getNombre() + " no está activa (RN-07)");
+        }
+        Arbitro arbitro = arbitroRepository.findById(request.arbitroId())
+                .orElseThrow(() -> ApiException.noEncontrado("No existe el árbitro " + request.arbitroId()));
+        if (!arbitro.isActivo()) {
+            throw ApiException.conflicto("El árbitro " + arbitro.getApellido() + " no está activo (RN-07)");
+        }
+
+        LocalDateTime inicio = request.fechaHoraInicio();
+        LocalDateTime desde = inicio.minus(SEPARACION_MINIMA);
+        LocalDateTime hasta = inicio.plus(SEPARACION_MINIMA);
+        // RN-01
+        if (partidoRepository.canchaOcupada(cancha.getId(), desde, hasta, excluirId)) {
+            throw ApiException.conflicto("La cancha ya tiene un partido a menos de 2 horas (RN-01)");
+        }
+        // RN-02
+        int fecha = request.numeroFecha();
+        for (Equipo e : List.of(local, visitante)) {
+            if (partidoRepository.equipoJuegaEnLaFecha(torneoId, fecha, e.getId(), excluirId)) {
+                throw ApiException.conflicto(e.getNombre() + " ya juega en la fecha " + fecha + " (RN-02)");
+            }
+        }
+        if (partidoRepository.arbitroOcupado(arbitro.getId(), desde, hasta, excluirId)) {
+            throw ApiException.conflicto("El árbitro ya dirige un partido a menos de 2 horas (RN-02)");
+        }
+
+        partido.setNumeroFecha(fecha);
+        partido.setEquipoLocal(local);
+        partido.setEquipoVisitante(visitante);
+        partido.setCancha(cancha);
+        partido.setArbitro(arbitro);
+        partido.setFechaHoraInicio(inicio);
+    }
+
+    private Equipo equipoDelTorneo(Integer equipoId, Integer torneoId) {
+        Equipo equipo = equipoRepository.findById(equipoId)
+                .orElseThrow(() -> ApiException.noEncontrado("No existe el equipo " + equipoId));
+        if (!equipo.getTorneo().getId().equals(torneoId)) {
+            throw ApiException.datosInvalidos("El equipo " + equipo.getNombre() + " no es de este torneo (RN-07)");
+        }
+        if (!equipo.isActivo()) {
+            throw ApiException.conflicto("El equipo " + equipo.getNombre() + " está desactivado (RN-07)");
+        }
+        return equipo;
     }
 }
