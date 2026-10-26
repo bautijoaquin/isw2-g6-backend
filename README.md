@@ -60,7 +60,7 @@ src/main/java/com/isw2/liga/
 | POST/PUT/PATCH | `/api/jugadores`, `/api/jugadores/{id}`, `/api/jugadores/{id}/activo` | Admin | RF-04 | ✅ |
 | GET | `/api/partidos?torneoId=1&fecha=3` | Público | RF-10 | ✅ |
 | POST | `/api/partidos` | Admin | RF-06, RN-01, RN-02, RN-07 | ✅ |
-| PUT/DELETE | `/api/partidos/{id}` | Admin | RF-06, RN-07 | ⬜ Scolari |
+| PUT/DELETE | `/api/partidos/{id}` | Admin | RF-06, RN-07 | ✅ |
 | POST | `/api/partidos/{id}/iniciar`, `/finalizar`, `/suspender` | Delegado/Admin | RF-07, RN-05 | ⬜ Scolari |
 | GET | `/api/partidos/{id}` (detalle + eventos + resultado) | Público | RF-10, RN-06 | ✅ |
 | POST | `/api/partidos/{id}/eventos` | Delegado/Admin | RF-08, RN-03, RN-04 | ✅ |
@@ -121,6 +121,9 @@ Al programar se controla:
   la fecha N no puede empezar antes de que termine la N-1, ni terminar después de que empiece la N+1.
 
 Los partidos SUSPENDIDOS no cuentan para RF-06, RN-01, RN-02 ni RN-07 (un suspendido no se reprograma: se crea uno nuevo).
+
+`PUT /api/partidos/{id}` usa el mismo cuerpo y las mismas reglas (el torneo no se cambia).
+`PUT` y `DELETE` solo se aceptan con el partido PROGRAMADO (RN-07); `DELETE` responde 204.
 
 ## Flujo de trabajo con Git
 
