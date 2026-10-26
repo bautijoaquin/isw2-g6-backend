@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * RF-06 y RF-10: programar partidos y armar el fixture.
+ * RF-06, RF-07 y RF-10: programar partidos, cambiar su estado y armar el fixture.
  * El resultado de cada partido se calcula con sus goles (RN-06).
  */
 @Service
@@ -99,6 +99,18 @@ public class PartidoService {
     /** RF-06: un partido PROGRAMADO todavía no tiene eventos, así que se puede borrar. */
     public void eliminar(Integer id) {
         partidoRepository.delete(buscarProgramado(id, "eliminar"));
+    }
+
+    /** RF-07 y RN-05: iniciar, finalizar o suspender. Al finalizar, el partido empieza a contar en la tabla. */
+    public PartidoDTO cambiarEstado(Integer id, EstadoPartido nuevo) {
+        Partido partido = partidoRepository.findConDetalleById(id)
+                .orElseThrow(() -> ApiException.noEncontrado("No existe el partido " + id));
+        if (!partido.getEstado().puedePasarA(nuevo)) {
+            throw ApiException.conflicto("Un partido " + partido.getEstado() + " no puede pasar a " + nuevo + " (RN-05)");
+        }
+        partido.setEstado(nuevo);
+        Resultado resultado = resultadoService.resultadosDe(List.of(partido)).get(id);
+        return PartidoDTO.desde(partido, resultado);
     }
 
     /**
