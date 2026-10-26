@@ -54,10 +54,10 @@ src/main/java/com/isw2/liga/
 | GET/POST/PUT | `/api/usuarios`, `/api/usuarios/{id}` | Admin | RF-02, RN-08 | ✅ |
 | PUT | `/api/usuarios/{id}/password` | Admin | RF-02 | ✅ |
 | PATCH | `/api/usuarios/{id}/activo` | Admin | RF-02, RN-08 | ✅ |
-| GET/POST/PUT | `/api/equipos`, `/api/equipos/{id}` | GET público, resto Admin | RF-03 | ⬜ Miretti |
-| PATCH | `/api/equipos/{id}/activo` | Admin | RF-03, RN-09 | ⬜ Miretti |
-| GET | `/api/equipos/{id}/jugadores` | Público | RF-05 | ⬜ Miretti |
-| POST/PUT/PATCH | `/api/jugadores`, `/api/jugadores/{id}`, `/api/jugadores/{id}/activo` | Admin | RF-04 | ⬜ Miretti |
+| GET/POST/PUT | `/api/equipos`, `/api/equipos/{id}` | GET público, resto Admin | RF-03 | ✅ |
+| PATCH | `/api/equipos/{id}/activo` | Admin | RF-03, RN-09 | ✅ |
+| GET | `/api/equipos/{id}/jugadores`, `/api/jugadores/{id}` | Público | RF-05 | ✅ |
+| POST/PUT/PATCH | `/api/jugadores`, `/api/jugadores/{id}`, `/api/jugadores/{id}/activo` | Admin | RF-04 | ✅ |
 | GET | `/api/partidos?torneoId=1&fecha=3` | Público | RF-10 | ⬜ Scolari |
 | POST/PUT/DELETE | `/api/partidos`, `/api/partidos/{id}` | Admin | RF-06, RN-01, RN-02, RN-07 | ⬜ Scolari |
 | POST | `/api/partidos/{id}/iniciar`, `/finalizar`, `/suspender` | Delegado/Admin | RF-07, RN-05 | ⬜ Scolari |
@@ -83,6 +83,22 @@ Errores: siempre `{"status": 409, "mensaje": "..."}`. Sin token: 401. Sin el rol
 ```
 
 `GET /api/usuarios` devuelve activos e inactivos; con `?incluirInactivos=false` solo los activos.
+
+### Ejemplos de cuerpos (equipos y jugadores)
+
+```jsonc
+// POST /api/equipos → 201 (barrio opcional; nombre único dentro del torneo)
+{ "torneoId": 1, "nombre": "Los Pumas", "barrio": "Candioti" }
+// PUT /api/equipos/{id} → 200 (el torneo no se cambia)
+{ "nombre": "Los Pumas FC", "barrio": "Candioti Sur" }
+// POST /api/jugadores → 201 (DNI de 7 u 8 dígitos, único en todo el sistema; camiseta 1 a 99, opcional)
+{ "equipoId": 1, "nombre": "Juan", "apellido": "Pérez", "dni": "35123456", "numeroCamiseta": 10 }
+// PUT /api/jugadores/{id} → 200 (no trae equipoId: el jugador no cambia de equipo)
+{ "nombre": "Juan", "apellido": "Pérez", "dni": "35123456", "numeroCamiseta": 9 }
+```
+
+`GET /api/equipos` acepta `?torneoId=1`. `GET /api/equipos` y `GET /api/equipos/{id}/jugadores` devuelven solo los activos;
+con `?incluirInactivos=true` también los desactivados (RF-05). No se puede cargar un jugador en un equipo desactivado.
 
 ## Flujo de trabajo con Git
 
