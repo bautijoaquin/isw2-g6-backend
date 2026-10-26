@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** RF-06: programar partidos con RN-01, RN-02 y RN-07. Canchas 1 y 2 y árbitros 1 y 2 vienen de data.sql. */
+/** RF-06: programar partidos con sus criterios y RN-01, RN-02 y RN-07. Canchas 1 y 2 y árbitros 1 y 2 vienen de data.sql. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:liga_test;DB_CLOSE_DELAY=-1")
@@ -81,9 +81,36 @@ class ProgramarPartidoTest {
         programar(1, norte, sur, 1, 1, "2026-11-07T15:00").andExpect(status().isCreated());
         programar(1, norte, oeste, 2, 2, "2026-11-08T15:00")
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.mensaje").value("Norte ya juega en la fecha 1 (RN-02)"));
+                .andExpect(jsonPath("$.mensaje").value("Norte ya juega en la fecha 1 (RF-06)"));
         // En otra fecha sí
         programar(2, norte, oeste, 2, 2, "2026-11-14T15:00").andExpect(status().isCreated());
+    }
+
+    @Test
+    void unaFechaNoEmpiezaAntesDeQueTermineLaAnterior() throws Exception {
+        programar(1, norte, sur, 1, 1, "2026-11-07T15:00").andExpect(status().isCreated());
+        // La fecha 1 termina a las 17:00 (2 horas despues de su ultimo partido)
+        programar(2, oeste, este, 2, 2, "2026-11-07T16:30")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value("La fecha 2 no puede empezar antes de que termine la fecha 1 (RN-07)"));
+        programar(2, oeste, este, 2, 2, "2026-11-07T17:00").andExpect(status().isCreated());
+    }
+
+    @Test
+    void unaFechaTerminaAntesDeQueEmpieceLaSiguiente() throws Exception {
+        programar(2, norte, sur, 1, 1, "2026-11-14T15:00").andExpect(status().isCreated());
+        programar(1, oeste, este, 2, 2, "2026-11-14T14:00")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value("La fecha 1 tiene que terminar antes de que empiece la fecha 2 (RN-07)"));
+        programar(1, oeste, este, 2, 2, "2026-11-14T13:00").andExpect(status().isCreated());
+    }
+
+    @Test
+    void unPartidoSuspendidoNoCuentaParaElOrdenDeLasFechas() throws Exception {
+        Integer id = JsonPath.read(programar(1, norte, sur, 1, 1, "2026-11-07T15:00")
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        partidoRepository.findById(id).orElseThrow().setEstado(EstadoPartido.SUSPENDIDO);
+        programar(2, oeste, este, 2, 2, "2026-11-07T15:30").andExpect(status().isCreated());
     }
 
     @Test
@@ -98,7 +125,7 @@ class ProgramarPartidoTest {
     void localYVisitanteIgualesDevuelve400() throws Exception {
         programar(1, norte, norte, 1, 1, "2026-11-07T15:00")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.mensaje").value("El equipo local y el visitante tienen que ser distintos (RN-07)"));
+                .andExpect(jsonPath("$.mensaje").value("El equipo local y el visitante tienen que ser distintos (RF-06)"));
     }
 
     @Test
@@ -106,7 +133,7 @@ class ProgramarPartidoTest {
         sur.setActivo(false);
         programar(1, norte, sur, 1, 1, "2026-11-07T15:00")
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.mensaje").value("El equipo Sur está desactivado (RN-07)"));
+                .andExpect(jsonPath("$.mensaje").value("El equipo Sur está desactivado (RF-06)"));
     }
 
     @Test

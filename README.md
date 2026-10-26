@@ -114,11 +114,13 @@ Sin `fecha` devuelve todo el torneo, ordenado por fecha y horario.
 ```
 
 Al programar se controla:
-- RN-01: la cancha no puede tener otro partido que empiece a menos de 2 horas.
-- RN-02: un equipo no juega dos partidos en la misma fecha y el árbitro no dirige dos partidos a menos de 2 horas.
-- RN-07: local y visitante distintos, del mismo torneo y activos; cancha y árbitro activos.
+- RF-06: local y visitante distintos, del mismo torneo y activos; cancha y árbitro activos; un equipo no juega dos veces en la misma fecha.
+- RN-01: la cancha no puede tener otro partido que empiece a menos de 2 horas (con exactamente 2 horas, sí).
+- RN-02: lo mismo para el árbitro.
+- RN-07: las fechas se juegan en orden. Una fecha termina 2 horas después de que empieza su último partido:
+  la fecha N no puede empezar antes de que termine la N-1, ni terminar después de que empiece la N+1.
 
-Los partidos SUSPENDIDOS no cuentan para RN-01 ni RN-02.
+Los partidos SUSPENDIDOS no cuentan para RF-06, RN-01, RN-02 ni RN-07 (un suspendido no se reprograma: se crea uno nuevo).
 
 ## Flujo de trabajo con Git
 
