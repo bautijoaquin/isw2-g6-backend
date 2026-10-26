@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** RF-06 y RN-07: modificar y eliminar partidos, solo mientras están PROGRAMADOS. */
+/** RF-06: modificar y eliminar partidos, solo mientras están PROGRAMADOS. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:liga_test;DB_CLOSE_DELAY=-1")
@@ -74,13 +74,28 @@ class ModificarEliminarPartidoTest {
     }
 
     @Test
+    void reprogramarTambienRespetaElOrdenDeLasFechas() throws Exception {
+        programar(norte, sur, 1, "2026-11-07T15:00");
+        String fecha2 = cuerpo(oeste, este, 2, "2026-11-14T15:00").replace("\"numeroFecha\":1", "\"numeroFecha\":2");
+        String respuesta = mvc.perform(post("/api/partidos").header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON).content(fecha2))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        Integer id = JsonPath.read(respuesta, "$.id");
+        mvc.perform(put("/api/partidos/" + id).header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(fecha2.replace("2026-11-14T15:00", "2026-11-07T16:00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value("La fecha 2 no puede empezar antes de que termine la fecha 1 (RN-07)"));
+    }
+
+    @Test
     void unPartidoQueYaEmpezoNoSeModificaNiSeElimina() throws Exception {
         Integer id = programar(norte, sur, 1, "2026-11-07T15:00");
         partidoRepository.findById(id).orElseThrow().setEstado(EstadoPartido.EN_JUEGO);
         modificar(id, norte, sur, 1, "2026-11-07T18:00")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.mensaje").value(
-                        "El partido está EN_JUEGO: solo se puede modificar un partido PROGRAMADO (RN-07)"));
+                        "El partido está EN_JUEGO: solo se puede modificar un partido PROGRAMADO (RF-06)"));
         mvc.perform(delete("/api/partidos/" + id).header("Authorization", "Bearer " + tokenAdmin))
                 .andExpect(status().isConflict());
     }

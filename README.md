@@ -123,7 +123,7 @@ Al programar se controla:
 Los partidos SUSPENDIDOS no cuentan para RF-06, RN-01, RN-02 ni RN-07 (un suspendido no se reprograma: se crea uno nuevo).
 
 `PUT /api/partidos/{id}` usa el mismo cuerpo y las mismas reglas (el torneo no se cambia).
-`PUT` y `DELETE` solo se aceptan con el partido PROGRAMADO (RN-07); `DELETE` responde 204.
+`PUT` y `DELETE` solo se aceptan con el partido PROGRAMADO (RF-06); `DELETE` responde 204.
 
 ## Flujo de trabajo con Git
 
