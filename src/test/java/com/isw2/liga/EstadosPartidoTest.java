@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** RF-07 y RN-05: iniciar, finalizar y suspender partidos. */
+/** RF-07, RN-05 y RN-07: iniciar, finalizar y suspender partidos. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:liga_test;DB_CLOSE_DELAY=-1")
@@ -94,6 +94,30 @@ class EstadosPartidoTest {
         cambiar(partido(EstadoPartido.FINALIZADO), "iniciar").andExpect(status().isConflict());
         cambiar(partido(EstadoPartido.SUSPENDIDO), "iniciar").andExpect(status().isConflict());
         cambiar(partido(EstadoPartido.EN_JUEGO), "iniciar").andExpect(status().isConflict());
+    }
+
+    @Test
+    void unaFechaNoEmpiezaHastaQueTermineLaAnterior() throws Exception {
+        Partido deLaFecha1 = partido(EstadoPartido.PROGRAMADO);
+        Partido deLaFecha2 = partido(EstadoPartido.PROGRAMADO);
+        deLaFecha2.setNumeroFecha(2);
+
+        cambiar(deLaFecha2, "iniciar")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value(
+                        "No se puede iniciar un partido de la fecha 2: la fecha 1 tiene partidos sin terminar (RN-07)"));
+        cambiar(deLaFecha1, "iniciar").andExpect(status().isOk());
+        cambiar(deLaFecha2, "iniciar").andExpect(status().isConflict());
+        cambiar(deLaFecha1, "finalizar").andExpect(status().isOk());
+        cambiar(deLaFecha2, "iniciar").andExpect(status().isOk());
+    }
+
+    @Test
+    void unPartidoSuspendidoCuentaComoTerminadoParaLaFechaSiguiente() throws Exception {
+        partido(EstadoPartido.SUSPENDIDO);
+        Partido deLaFecha2 = partido(EstadoPartido.PROGRAMADO);
+        deLaFecha2.setNumeroFecha(2);
+        cambiar(deLaFecha2, "iniciar").andExpect(status().isOk());
     }
 
     @Test

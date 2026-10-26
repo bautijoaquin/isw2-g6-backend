@@ -61,7 +61,7 @@ src/main/java/com/isw2/liga/
 | GET | `/api/partidos?torneoId=1&fecha=3` | Público | RF-10 | ✅ |
 | POST | `/api/partidos` | Admin | RF-06, RN-01, RN-02, RN-07 | ✅ |
 | PUT/DELETE | `/api/partidos/{id}` | Admin | RF-06, RN-07 | ✅ |
-| POST | `/api/partidos/{id}/iniciar`, `/finalizar`, `/suspender` | Delegado/Admin | RF-07, RN-05 | ✅ |
+| POST | `/api/partidos/{id}/iniciar`, `/finalizar`, `/suspender` | Delegado/Admin | RF-07, RN-05, RN-07 | ✅ |
 | GET | `/api/partidos/{id}` (detalle + eventos + resultado) | Público | RF-10, RN-06 | ✅ |
 | POST | `/api/partidos/{id}/eventos` | Delegado/Admin | RF-08, RN-03, RN-04 | ✅ |
 | DELETE | `/api/eventos/{id}` | Delegado/Admin | RF-09 | ✅ |
@@ -128,6 +128,7 @@ Los partidos SUSPENDIDOS no cuentan para RF-06, RN-01, RN-02 ni RN-07 (un suspen
 Estados (RN-05): `PROGRAMADO → EN_JUEGO → FINALIZADO`, y desde `PROGRAMADO` o `EN_JUEGO` se puede pasar a `SUSPENDIDO`.
 `POST /api/partidos/{id}/iniciar` (o `/finalizar`, `/suspender`) no lleva cuerpo y devuelve el partido actualizado.
 Cualquier otro cambio responde 409. Solo los partidos FINALIZADOS suman en la tabla y cuentan para los suspendidos.
+Un partido de la fecha N no se puede iniciar mientras la fecha N-1 tenga partidos PROGRAMADOS o EN_JUEGO (RN-07).
 
 ## Flujo de trabajo con Git
 
