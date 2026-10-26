@@ -59,7 +59,8 @@ src/main/java/com/isw2/liga/
 | GET | `/api/equipos/{id}/jugadores`, `/api/jugadores/{id}` | Público | RF-05 | ✅ |
 | POST/PUT/PATCH | `/api/jugadores`, `/api/jugadores/{id}`, `/api/jugadores/{id}/activo` | Admin | RF-04 | ✅ |
 | GET | `/api/partidos?torneoId=1&fecha=3` | Público | RF-10 | ✅ |
-| POST/PUT/DELETE | `/api/partidos`, `/api/partidos/{id}` | Admin | RF-06, RN-01, RN-02, RN-07 | ⬜ Scolari |
+| POST | `/api/partidos` | Admin | RF-06, RN-01, RN-02, RN-07 | ✅ |
+| PUT/DELETE | `/api/partidos/{id}` | Admin | RF-06, RN-07 | ⬜ Scolari |
 | POST | `/api/partidos/{id}/iniciar`, `/finalizar`, `/suspender` | Delegado/Admin | RF-07, RN-05 | ⬜ Scolari |
 | GET | `/api/partidos/{id}` (detalle + eventos + resultado) | Público | RF-10, RN-06 | ✅ |
 | POST | `/api/partidos/{id}/eventos` | Delegado/Admin | RF-08, RN-03, RN-04 | ✅ |
@@ -105,6 +106,21 @@ con `?incluirInactivos=true` también los desactivados (RF-05). No se puede carg
 `GET /api/partidos?torneoId=1&fecha=3` devuelve los partidos de esa fecha ordenados por horario, cada uno con
 `local`, `visitante`, `cancha`, `arbitro`, `fechaHoraInicio`, `estado` y el resultado calculado (`golesLocal`, `golesVisitante`).
 Sin `fecha` devuelve todo el torneo, ordenado por fecha y horario.
+
+```jsonc
+// POST /api/partidos → 201 (queda PROGRAMADO)
+{ "torneoId": 1, "numeroFecha": 1, "equipoLocalId": 1, "equipoVisitanteId": 2,
+  "canchaId": 1, "arbitroId": 1, "fechaHoraInicio": "2026-11-07T15:00" }
+```
+
+Al programar se controla:
+- RF-06: local y visitante distintos, del mismo torneo y activos; cancha y árbitro activos; un equipo no juega dos veces en la misma fecha.
+- RN-01: la cancha no puede tener otro partido que empiece a menos de 2 horas (con exactamente 2 horas, sí).
+- RN-02: lo mismo para el árbitro.
+- RN-07: las fechas se juegan en orden. Una fecha termina 2 horas después de que empieza su último partido:
+  la fecha N no puede empezar antes de que termine la N-1, ni terminar después de que empiece la N+1.
+
+Los partidos SUSPENDIDOS no cuentan para RF-06, RN-01, RN-02 ni RN-07 (un suspendido no se reprograma: se crea uno nuevo).
 
 ## Flujo de trabajo con Git
 
