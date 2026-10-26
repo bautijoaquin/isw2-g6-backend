@@ -7,6 +7,7 @@ import com.isw2.liga.exception.ApiException;
 import com.isw2.liga.model.Arbitro;
 import com.isw2.liga.model.Cancha;
 import com.isw2.liga.model.Equipo;
+import com.isw2.liga.model.EstadoPartido;
 import com.isw2.liga.model.Partido;
 import com.isw2.liga.model.Torneo;
 import com.isw2.liga.repository.ArbitroRepository;
@@ -83,6 +84,24 @@ public class PartidoService {
     }
 
     /**
+     * RF-06: solo se reprograma un partido que todavía no empezó, con los mismos controles que al programar
+     * (RN-01, RN-02 y RN-07). El torneo no se cambia.
+     */
+    public PartidoDTO modificar(Integer id, PartidoRequest request) {
+        Partido partido = buscarProgramado(id, "modificar");
+        if (!partido.getTorneo().getId().equals(request.torneoId())) {
+            throw ApiException.datosInvalidos("El torneo de un partido no se puede cambiar");
+        }
+        completar(partido, request, id);
+        return PartidoDTO.desde(partido, new Resultado(0, 0));
+    }
+
+    /** RF-06: un partido PROGRAMADO todavía no tiene eventos, así que se puede borrar. */
+    public void eliminar(Integer id) {
+        partidoRepository.delete(buscarProgramado(id, "eliminar"));
+    }
+
+    /**
      * Valida el pedido contra los criterios de RF-06 y las reglas RN-01, RN-02 y RN-07, y si está todo bien
      * carga los datos en el partido.
      *
@@ -144,6 +163,16 @@ public class PartidoService {
         partido.setCancha(cancha);
         partido.setArbitro(arbitro);
         partido.setFechaHoraInicio(inicio);
+    }
+
+    private Partido buscarProgramado(Integer id, String accion) {
+        Partido partido = partidoRepository.findById(id)
+                .orElseThrow(() -> ApiException.noEncontrado("No existe el partido " + id));
+        if (partido.getEstado() != EstadoPartido.PROGRAMADO) {
+            throw ApiException.conflicto("El partido está " + partido.getEstado()
+                    + ": solo se puede " + accion + " un partido PROGRAMADO (RF-06)");
+        }
+        return partido;
     }
 
     private Equipo equipoDelTorneo(Integer equipoId, Integer torneoId) {
