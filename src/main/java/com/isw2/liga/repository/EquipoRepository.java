@@ -10,4 +10,6 @@ public interface EquipoRepository extends JpaRepository<Equipo, Integer> {
     List<Equipo> findByTorneoIdOrderByNombreAsc(Integer torneoId);
 
     boolean existsByTorneoIdAndNombreIgnoreCase(Integer torneoId, String nombre);
+
+    boolean existsByTorneoIdAndNombreIgnoreCaseAndIdNot(Integer torneoId, String nombre, Integer id);
 }

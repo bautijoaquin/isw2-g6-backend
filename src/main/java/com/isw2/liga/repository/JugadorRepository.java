@@ -10,4 +10,6 @@ public interface JugadorRepository extends JpaRepository<Jugador, Integer> {
     List<Jugador> findByEquipoIdOrderByApellidoAscNombreAsc(Integer equipoId);
 
     boolean existsByDni(String dni);
+
+    boolean existsByDniAndIdNot(String dni, Integer id);
 }
