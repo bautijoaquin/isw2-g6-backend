@@ -96,6 +96,25 @@ class UsuarioControllerTest {
     }
 
     @Test
+    void elTokenDeUnUsuarioDesactivadoDejaDeServirYElRolNuevoSeAplicaEnseguida() throws Exception {
+        int id = idDe(crear("conToken", "clave1234", "ADMIN"));
+        String token = login("conToken", "clave1234");
+        mvc.perform(get("/api/usuarios").header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+
+        // Pasa a delegado: el mismo token ya no tiene permisos de administrador
+        mvc.perform(put("/api/usuarios/" + id).header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombreCompleto\":\"Con Token\",\"rol\":\"DELEGADO\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/usuarios").header("Authorization", "Bearer " + token)).andExpect(status().isForbidden());
+
+        // Desactivado: el token que ya tenía deja de servir
+        cambiarActivo(id, false).andExpect(status().isOk());
+        mvc.perform(post("/api/partidos/1/iniciar").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void cambiarContraseniaPermiteIngresarConLaNueva() throws Exception {
         int id = idDe(crear("cambioclave", "clave1234", "DELEGADO"));
 
