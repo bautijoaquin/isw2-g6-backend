@@ -1,5 +1,7 @@
 package com.isw2.liga.security;
 
+import com.isw2.liga.model.Usuario;
+import com.isw2.liga.repository.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,7 +19,9 @@ import java.util.List;
 /**
  * Lee el header "Authorization: Bearer <token>" y, si el token es válido,
  * deja autenticado al usuario con su rol (ROLE_ADMIN o ROLE_DELEGADO).
- * Si no hay token o es inválido, la petición sigue como anónima y
+ * El rol y si está activo se leen de la base en cada petición: un usuario desactivado
+ * pierde el acceso aunque su token no haya vencido, y un cambio de rol se aplica enseguida (RF-02).
+ * Si no hay token, es inválido o el usuario está desactivado, la petición sigue como anónima y
  * SecurityConfig decide si corresponde 401.
  */
 @Component
@@ -26,9 +30,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String PREFIJO = "Bearer ";
 
     private final JwtService jwtService;
+    private final UsuarioRepository usuarioRepository;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, UsuarioRepository usuarioRepository) {
         this.jwtService = jwtService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @Override
@@ -36,13 +42,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith(PREFIJO)) {
-            jwtService.validar(header.substring(PREFIJO.length())).ifPresent(claims -> {
-                String rol = claims.get("rol", String.class);
-                var principal = new UsuarioAutenticado(claims.get("id", Integer.class), claims.getSubject(), rol);
-                var auth = new UsernamePasswordAuthenticationToken(
-                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + rol)));
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            });
+            jwtService.validar(header.substring(PREFIJO.length()))
+                    .map(claims -> claims.get("id", Integer.class))
+                    .flatMap(usuarioRepository::findById)
+                    .filter(Usuario::isActivo)
+                    .ifPresent(usuario -> {
+                        String rol = usuario.getRol().name();
+                        var principal = new UsuarioAutenticado(usuario.getId(), usuario.getUsername(), rol);
+                        var auth = new UsernamePasswordAuthenticationToken(
+                                principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + rol)));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    });
         }
         chain.doFilter(request, response);
     }
